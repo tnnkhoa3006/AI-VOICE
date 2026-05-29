@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mimo_voice_studio
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mimo_voice_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/mimo_voice_studio
+      REDIS_URL: redis://redis:6379/0
+      LOCAL_STORAGE_PATH: /app/storage
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/mimo_voice_studio
+      REDIS_URL: redis://redis:6379/0
+      LOCAL_STORAGE_PATH: /app/storage
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./apps/worker:/app/apps/worker
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
+  minio-data:
+

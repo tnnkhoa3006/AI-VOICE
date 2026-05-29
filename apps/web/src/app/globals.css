@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: #f7f3ea;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0.92), rgba(247, 243, 234, 1)),
+    #f7f3ea;
+  color: #171717;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.waveform-bar {
+  transform-origin: bottom;
+}
+
